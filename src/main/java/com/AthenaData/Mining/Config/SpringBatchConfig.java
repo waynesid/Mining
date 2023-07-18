@@ -5,64 +5,67 @@ package com.AthenaData.Mining.Config;
  * @Date 17/07/2023
  */
 
-import com.AthenaData.Mining.Batch.DBWriter;
-import com.AthenaData.Mining.Batch.MatchStatsProcessor;
 import com.AthenaData.Mining.Model.MatchStats;
-import com.AthenaData.Mining.Model.MatchStatsDto;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
-import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.core.io.Resource;
 
 @Configuration
 @EnableBatchProcessing
 public class SpringBatchConfig {
-    @Bean
-    public ItemWriter<MatchStats> writer() {
-        return new DBWriter();
-    }
-
+    @Value("file:src/main/resources/*.csv")
+    private Resource[] inputResources;
 
     @Bean
-    public Step step(ItemProcessor<MatchStats, MatchStats> processor, JobRepository jobRepository, PlatformTransactionManager transactionManager) {
-        return new StepBuilder("myStep", jobRepository)
-                .<MatchStats, MatchStats>chunk(10, transactionManager)
-                .reader(itemReader())
-                .processor(processor)
-                .writer(writer())
+    public Job job(JobBuilder jobBuilderFactory,
+                   StepBuilder stepBuilderFactory,
+                   ItemReader<MatchStats> itemReader,
+                   ItemProcessor<MatchStats, MatchStats> itemProcessor,
+                   ItemWriter<MatchStats> itemWriter) {
+
+        Step step = stepBuilderFactory
+                .<MatchStats, MatchStats>chunk(200)
+                .reader(itemReader)
+                .processor(itemProcessor)
+                .writer(itemWriter)
+                .faultTolerant()
+                .skipLimit(5000)
+                .skip(Exception.class)
                 .build();
-    }
+        System.out.println("MatchStats reading step başarılı bir şekilde tamamlandı.");
 
-    @Bean
-    public Job job(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
-        return new JobBuilder("myJob", jobRepository)
+
+        Job job = jobBuilderFactory
                 .incrementer(new RunIdIncrementer())
-                .flow(step(processor(),jobRepository,transactionManager))
-                .end()
+                .start(step)
                 .build();
-    }
+        System.out.println("Job başarılı bir şekilde stepleri tamamladı.");
+        return job;
 
+    }
 
     @Bean
     public FlatFileItemReader<MatchStats> itemReader() {
 
         FlatFileItemReader<MatchStats> flatFileItemReader = new FlatFileItemReader<>();
-        //flatFileItemReader.setResource(new FileSystemResource("src/main/resources/MatchStats.csv"));
-        String inputResource = "src/main/resources/MatchStats.csv";
+        //flatFileItemReader.setResource(new FileSystemResource("src/main/resources/understand_per_game.csv"));
+        String inputResource = "src/main/resources/understat_per_game.csv";
         //flatFileItemReader.setEncoding("UTF-8");
         flatFileItemReader.setResource(new FileSystemResource(inputResource));
         flatFileItemReader.setName("CSV-Reader");
@@ -73,21 +76,8 @@ public class SpringBatchConfig {
         return flatFileItemReader;
     }
 
-/*
-    @Bean
-    public JdbcBatchItemWriter<MatchStats> matchStatsWriter(){
-        JdbcBatchItemWriter<MatchStats> matchStatsJdbcBatchItemWriter = new JdbcBatchItemWriter<>();
 
-        matchStatsJdbcBatchItemWriter.setDataSource(dataSource);
-
-        matchStatsJdbcBatchItemWriter.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
-
-        matchStatsJdbcBatchItemWriter.afterPropertiesSet();
-
-        return matchStatsJdbcBatchItemWriter;
-    }*/
-
-    //TODO LINE 122
+    //TODO linetokenizer.setNames
     @Bean
     public LineMapper<MatchStats> lineMapper() {
         DefaultLineMapper<MatchStats> defaultLineMapper = new DefaultLineMapper<>();
@@ -95,7 +85,7 @@ public class SpringBatchConfig {
 
         lineTokenizer.setDelimiter(";");
         lineTokenizer.setStrict(false);
-        lineTokenizer.setNames(new String[]{"league", "year", "h_a", "xG", "xGA", "npxG", "npxGA", "deep", "deep_allowed", "scored", "missed", "xpts", "result", "date", "wins", "draws", "loses", "pts", "npxGD", "ppda_coef", "ppda_att", "ppda_def", "oppda_coef", "oppda_att", "oppda_def", "team", "xG_diff", "xGA_diff", "xpts_diff"});
+        lineTokenizer.setNames(new String[]{"gender", "birthDate", "jobCategory", "salary", "jobTime", "prevExp", "minority"});
 
         BeanWrapperFieldSetMapper<MatchStats> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
         fieldSetMapper.setTargetType(MatchStats.class);
@@ -106,6 +96,4 @@ public class SpringBatchConfig {
 
         return defaultLineMapper;
     }
-
-
 }
