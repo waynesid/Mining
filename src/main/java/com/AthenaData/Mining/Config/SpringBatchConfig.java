@@ -14,6 +14,7 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
@@ -22,55 +23,37 @@ import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-
-import javax.sql.DataSource;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @EnableBatchProcessing
 public class SpringBatchConfig {
-    @Autowired
-    public JobBuilder jobBuilderFactory;
-
-    @Autowired
-    public StepBuilder stepBuilderFactory;
-    @Autowired
-    public DataSource dataSource;
-
-    @Autowired
-    public MatchStatsProcessor processor;
-
     @Bean
-    public ItemWriter<MatchStats> writer(){
+    public ItemWriter<MatchStats> writer() {
         return new DBWriter();
     }
 
 
+    @Bean
+    public Step step(ItemProcessor<MatchStats, MatchStats> processor, JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("myStep", jobRepository)
+                .<MatchStats, MatchStats>chunk(10, transactionManager)
+                .reader(itemReader())
+                .processor(processor)
+                .writer(writer())
+                .build();
+    }
 
     @Bean
-    public Job job() throws Exception {
-
-        Step step = stepBuilderFactory
-                .<MatchStats, MatchStats>chunk(200)
-                .reader(itemReader())
-                .processor((ItemProcessor<? super MatchStats, ? extends MatchStats>) processor.process(new MatchStats()))
-                .writer(writer())
-                .faultTolerant()
-                .skipLimit(5000)
-                .skip(Exception.class)
-                .build();
-        System.out.println("MatchStats reading ");
-
-        Job job = jobBuilderFactory
+    public Job job(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new JobBuilder("myJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
-                .start(step)
+                .flow(step(processor(),jobRepository,transactionManager))
+                .end()
                 .build();
-        System.out.println("Job");
-        return job;
     }
 
 
@@ -112,7 +95,7 @@ public class SpringBatchConfig {
 
         lineTokenizer.setDelimiter(";");
         lineTokenizer.setStrict(false);
-        lineTokenizer.setNames(new String[]{"gender", "birthDate", "jobCategory", "salary", "jobTime", "prevExp", "minority"});
+        lineTokenizer.setNames(new String[]{"league", "year", "h_a", "xG", "xGA", "npxG", "npxGA", "deep", "deep_allowed", "scored", "missed", "xpts", "result", "date", "wins", "draws", "loses", "pts", "npxGD", "ppda_coef", "ppda_att", "ppda_def", "oppda_coef", "oppda_att", "oppda_def", "team", "xG_diff", "xGA_diff", "xpts_diff"});
 
         BeanWrapperFieldSetMapper<MatchStats> fieldSetMapper = new BeanWrapperFieldSetMapper<>();
         fieldSetMapper.setTargetType(MatchStats.class);
@@ -123,7 +106,6 @@ public class SpringBatchConfig {
 
         return defaultLineMapper;
     }
-
 
 
 }

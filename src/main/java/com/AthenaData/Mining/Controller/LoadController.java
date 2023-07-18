@@ -7,6 +7,7 @@ import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteExcep
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Date;
@@ -18,6 +19,7 @@ import java.util.Map;
  * @Date 17/07/2023
  */
 @RestController
+@RequestMapping("/load")
 public class LoadController {
 
     @Autowired
@@ -27,12 +29,12 @@ public class LoadController {
     Job job;
 
 
-  /*  @GetMapping
+    @GetMapping
     public BatchStatus load(){
 
         Map<String, Long> maps = new HashMap<>();
         maps.put("time", System.currentTimeMillis());
-        JobParameters parameters = new JobParameters(maps);
+        JobParameters parameters = new JobParameters();
         JobExecution jobExecution = null;
         try {
             jobExecution = jobLauncher.run(job, parameters);
@@ -55,5 +57,5 @@ public class LoadController {
         }
 
         return jobExecution.getStatus();
-    }*/
+    }
 }

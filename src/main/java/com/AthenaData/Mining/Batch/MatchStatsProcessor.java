@@ -13,9 +13,9 @@ import org.springframework.stereotype.Component;
 public class MatchStatsProcessor implements ItemProcessor<MatchStats, MatchStatsDto> {
 
     @Override
-    public MatchStatsDto process(final MatchStats MatchStats) throws Exception {
+    public MatchStatsDto process(MatchStats MatchStats) throws Exception {
         System.out.println("Transforming MatchStats(s) to MatchStatsDto(s)..");
-        final MatchStatsDto empployeeDto = new MatchStatsDto(
+         MatchStatsDto matchStatsDto = new MatchStatsDto(
                 MatchStats.getLeague(),
                 MatchStats.getYear(),
                 MatchStats.getH_a(),
@@ -45,7 +45,7 @@ public class MatchStatsProcessor implements ItemProcessor<MatchStats, MatchStats
                 MatchStats.getXpts_diff(),
                 MatchStats.getXg());
 
-        return empployeeDto;
+        return matchStatsDto;
     }
 
 }
