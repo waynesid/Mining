@@ -20,20 +20,27 @@ import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.stereotype.Component;
 
 @Configuration
 @EnableBatchProcessing
-public class SpringBatchConfig {
+@Component
+public class SpringBatchConfig{
     @Value("file:src/main/resources/*.csv")
     private Resource[] inputResources;
 
+    @Autowired
+    private JobBuilder jobBuilder;
+
+
     @Bean
-    public Job job(JobBuilder jobBuilderFactory,
+    public Job job( JobBuilder jobBuilder,
                    StepBuilder stepBuilderFactory,
                    ItemReader<MatchStats> itemReader,
                    ItemProcessor<MatchStats, MatchStats> itemProcessor,
@@ -48,14 +55,14 @@ public class SpringBatchConfig {
                 .skipLimit(5000)
                 .skip(Exception.class)
                 .build();
-        System.out.println("MatchStats reading step başarılı bir şekilde tamamlandı.");
+        System.out.println("MatchStats reading step successfully completed");
 
 
-        Job job = jobBuilderFactory
+        Job job = jobBuilder
                 .incrementer(new RunIdIncrementer())
                 .start(step)
                 .build();
-        System.out.println("Job başarılı bir şekilde stepleri tamamladı.");
+        System.out.println("Job successfully completed the steps");
         return job;
 
     }
